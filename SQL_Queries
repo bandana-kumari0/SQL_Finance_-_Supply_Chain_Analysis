@@ -1,5 +1,5 @@
-SQL Queries 
-Atliq Hardwares Finance and Supply Chain Analytics Project 
+# SQL Queries 
+## Atliq Hardwares Finance and Supply Chain Analytics Project 
 #1Q.create report than contains Month,product name,variant 
 #sold quantity,gross price per item,gross price total 
 SELECT monthname(s.date) as month,p.product,p.variant,s.sold_quantity, 
