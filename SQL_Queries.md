@@ -3,8 +3,11 @@
 ## Atliq Hardwares Finance and Supply Chain Analytics Project 
 ### 1Q.create report than contains Month,product name,variant 
 #### sold quantity,gross price per item,gross price total 
+
 SELECT monthname(s.date) as month,p.product,p.variant,s.sold_quantity,
+
 round(g.gross_price,2) as gross_price, 
+
 round(s.sold_quantity * g.gross_price,2) as gross_price_total 
 FROM fact_sales_monthly s
 join dim_product p 
