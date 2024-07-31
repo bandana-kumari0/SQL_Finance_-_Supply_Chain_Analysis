@@ -3,16 +3,16 @@
 ## Atliq Hardwares Finance and Supply Chain Analytics Project 
 ### 1Q.create report than contains Month,product name,variant 
 #### sold quantity,gross price per item,gross price total 
-SELECT monthname(s.date) as month,p.product,p.variant,s.sold_quantity, 
+SELECT monthname(s.date) as month,p.product,p.variant,s.sold_quantity,
 round(g.gross_price,2) as gross_price, 
 round(s.sold_quantity * g.gross_price,2) as gross_price_total 
-FROM fact_sales_monthly s 
+FROM fact_sales_monthly s
 join dim_product p 
 using (product_code) 
 join fact_gross_price g 
 on g.product_code = s.product_code and g.fiscal_year = get_fiscal_year(s.date) 
 where 
  customer_code = 90002002 
- and get_fiscal_year(date) = 2021 
+ and get_fiscal_year(date) = 2021
 order by date asc 
 limit 1000000; 
