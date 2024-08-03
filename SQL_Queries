@@ -18,9 +18,12 @@ where
  customer_code = 90002002 
  and get_fiscal_year(date) = 2021 
 order by date asc 
-limit 1000000; 
+limit 1000000;
 
-# 2Q.total gross price per date 
+======================================================================================
+
+# 2Q. Total gross price per date 
+
 SELECT monthname(s.date) as month, 
 round(sum(s.sold_quantity * g.gross_price),2) as gross_price_total 
 FROM fact_sales_monthly s 
@@ -31,4 +34,125 @@ where
 group by s.date 
 order by date asc; 
 
-# 3Q.total gross price per F
+======================================================================================
+
+# 3Q. Total gross price per F
+
+select g.fiscal_year, 
+round(sum(s.sold_quantity * g.gross_price)/1000000,2) as "gross_price_total(in mln)" 
+from fact_sales_monthly s 
+join fact_gross_price g 
+on s.product_code = g.product_code 
+and get_fiscal_year(s.date) = g.fiscal_year 
+where customer_code = 90002002 
+group by g.fiscal_year; 
+
+======================================================================================
+
+#4Q Top cutomers by Net Sales 
+
+SELECT c.customer, 
+round(sum(net_sales)/1000000,2) as net_sales_mln 
+FROM gdb0041.net_sales s 
+join dim_customer c 
+using (customer_code) 
+where fiscal_year = 2021 
+group by customer 
+order by net_sales_mln desc 
+limit 5; 
+
+======================================================================================
+
+#5Q Top markets by Net Sales 
+
+SELECT market, 
+round(sum(net_sales)/1000000,2) as net_sales_mln 
+FROM gdb0041.net_sales 
+where fiscal_year = 2021 
+group by market 
+order by net_sales_mln desc 
+limit 5; 
+
+======================================================================================
+
+#6Q top 10 customers by net_sales_% contribution 
+
+with cte as( 
+SELECT c.customer, 
+ round(sum(net_sales)/1000000,2) as net_sales_mln 
+ FROM gdb0041.net_sales s 
+ join dim_customer c 
+ using (customer_code) 
+ where s.fiscal_year = 2021 
+group by customer 
+ order by net_sales_mln desc 
+) 
+select *, 
+round(net_sales_mln*100/sum(net_sales_mln) over(),2) as net_sales_perc 
+from cte 
+order by net_sales_perc desc 
+limit 10; 
+
+======================================================================================
+
+# 7Q. region wise net sales breakdown 
+
+with cte as(select customer, 
+sum(net_sales) as net_sales 
+from net_sales s 
+join dim_customer c 
+using (customer_code) 
+where s.fiscal_year = 2021 and region = "APAC" 
+group by customer 
+order by net_sales desc 
+) 
+select customer,round(net_sales*100/sum(net_sales) over(),2) as net_sales_perc 
+from cte 
+limit 10; 
+
+======================================================================================
+
+#8Q.Retrieve the top 2 markets in every region by their gross sales amount 
+#in FY=2021. 
+
+with cte1 as( 
+SELECT c.region , c.market, 
+sum(g.gross_price_total) as gross_sales_total 
+FROM gdb0041.`gross sales` g 
+join dim_customer c 
+using (customer_code) 
+group by 1,2), 
+cte2 as( 
+select *, dense_rank() over(partition by region 
+order by gross_sales_total desc) as rnk 
+from cte1) 
+select * from cte2 
+where rnk <= 2; 
+
+======================================================================================
+
+#9Q. supply chain - forecast quantity 
+ 
+with forecast_err_table as ( 
+ select 
+ s.customer_code as customer_code, 
+ c.customer as customer_name, 
+ c.market as market, 
+ sum(s.sold_quantity) as total_sold_qty, 
+ sum(s.forecast_quantity) as total_forecast_qty, 
+ sum(s.forecast_quantity-s.sold_quantity) as net_error, 
+ round(sum(s.forecast_quantity-s.sold_quantity)*100/sum(s.forecast_quantity),1) 
+as net_error_pct, 
+ sum(abs(s.forecast_quantity-s.sold_quantity)) as abs_error, 
+ round(sum(abs(s.forecast_quantitysold_quantity))*100/sum(s.forecast_quantity),2) as abs_error_pct 
+ from fact_act_est s 
+ join dim_customer c 
+ on s.customer_code = c.customer_code 
+ where s.fiscal_year=2021 
+ group by customer_code) 
+ select *, 
+ if (abs_error_pct > 100, 0, 100.0 - abs_error_pct) as forecast_accuracy 
+ from forecast_err_table 
+ order by forecast_accuracy desc;
+
+======================================================================================
